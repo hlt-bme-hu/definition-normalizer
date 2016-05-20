@@ -14,16 +14,16 @@ def parse_args():
     p = ArgumentParser()
     p.add_argument('-d', '--definitions', type=open, default=stdin,
                    help='Name of the file with the graph definitions. If not '
-                        'specified, the definitions are read from stdin.')
+                        'specified, the definitions are read from stdin')
     p.add_argument('-i', '--max-iter', type=int, default=10,
-                   help='The maximum number of iterations.')
+                   help='The maximum number of iterations. The default is 10')
     p.add_argument(
         '-m', '--mode',
         choices=['rare', 'frequent', 'random', 'alpha', 'deflen', 'invdeflen'],
         default='rare',
         help='Skip most frequent/rare words or choose random words to skip')
     p.add_argument('-e', '--error-fn', type=str, default="errors",
-                   help='Name of the error file log')
+                   help='Name of the error log file')
     p.add_argument('-a', '--augmented', dest='filename')
     return p.parse_args()
 
