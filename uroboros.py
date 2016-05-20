@@ -12,14 +12,18 @@ logging.basicConfig(
 
 def parse_args():
     p = ArgumentParser()
-    p.add_argument('-d', '--definitions', type=str, default="stdin")
-    p.add_argument('-i', '--max-iter', type=int, default=10)
+    p.add_argument('-d', '--definitions', type=open, default=stdin,
+                   help='Name of the file with the graph definitions. If not '
+                        'specified, the definitions are read from stdin.')
+    p.add_argument('-i', '--max-iter', type=int, default=10,
+                   help='The maximum number of iterations.')
     p.add_argument(
         '-m', '--mode',
         choices=['rare', 'frequent', 'random', 'alpha', 'deflen', 'invdeflen'],
         default='rare',
-        help="Skip most frequent/rare words or choose random words to skip")
-    p.add_argument('-e', '--error-fn', type=str, default="errors")
+        help='Skip most frequent/rare words or choose random words to skip')
+    p.add_argument('-e', '--error-fn', type=str, default="errors",
+                   help='Name of the error file log')
     p.add_argument('-a', '--augmented', dest='filename')
     return p.parse_args()
 
@@ -35,7 +39,7 @@ def read_definition_graph(stream, all_needed, needed_wds, fn):
         graph[word] |= set(fs[1:])
     for word, def_words in graph.iteritems():
         def_words -= set([word])
-    if all_needed:    
+    if all_needed:
         return graph
     return get_augmented_graph(graph, needed_wds, fn)
 
@@ -47,13 +51,13 @@ def get_augmented_graph(graph, needed_wds, fn):
         if not wd in graph:
             continue
         needed_graph[wd] = graph[wd]
-    missing = set([]) 
+    missing = set([])
     for wd in needed_graph:
         def_wds = list(needed_graph[wd])
         for def_w in def_wds:
             if def_w not in needed_graph:
                 missing.add(def_w)
-    new_needed = set([])          
+    new_needed = set([])
     return augment_needed(needed_graph, graph, 1, missing, new_needed, fn)
 
 def augment_needed(needed_graph, graph, iternum, prev_missing, new_needed, fn):
@@ -75,7 +79,7 @@ def augment_needed(needed_graph, graph, iternum, prev_missing, new_needed, fn):
             if dw not in needed_graph and dw not in prev_missing_list \
                and dw not in missing:
                 missing.add(dw)
-    return augment_needed(needed_graph, graph, 
+    return augment_needed(needed_graph, graph,
                           iternum+1, missing, new_needed, fn)
 
 def get_freqs(graph, mode):
@@ -90,7 +94,7 @@ def get_freqs(graph, mode):
     return freqs
 
 
-def create_uroboros(graph, mode, max_iter, freqs):
+def create_uroboros(graph, mode, max_iter):
     sort_by = get_sort_mode(mode)
     for i in xrange(max_iter):
         logging.info('iter {0} -- graph size: {1}'.format(i + 1, len(graph)))
@@ -184,21 +188,16 @@ def main():
     args = parse_args()
     all_needed = True
     needed_wds = set([])
-    if args.filename != None:
+    if args.filename is not None:
         all_needed = False
-        needed_wds = set([l.strip().decode('utf-8') for l in open(args.filename)])
+        needed_wds = set(l.strip().decode('utf-8') for l in open(args.filename))
     logging.info('reading definition graph...')
-    if args.definitions == "stdin":
-        def_graph = read_definition_graph(stdin, all_needed, needed_wds, args.filename)
-    else:
-        def_graph = read_definition_graph(args.definitions, all_needed, 
-                                          needed_wds, args.filename)
+    def_graph = read_definition_graph(args.definitions, all_needed,
+                                      needed_wds, args.filename)
     logging.info('Definition graph read')
     correct_integrity(def_graph, args.error_fn)
     logging.info('Definition integrity corrected')
-    freq = get_freqs(def_graph, args.mode)
-    create_uroboros(def_graph, mode=args.mode, max_iter=args.max_iter,
-                    freqs=freq)
+    create_uroboros(def_graph, mode=args.mode, max_iter=args.max_iter)
     for word, right_side in def_graph.iteritems():
         print(u'{0}\t{1}'.format(
             word, '\t'.join(sorted(right_side))).encode('utf8'))
